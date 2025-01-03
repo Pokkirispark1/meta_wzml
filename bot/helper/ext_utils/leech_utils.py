@@ -305,7 +305,7 @@ async def format_filename(file_, user_id, dirpath=None, isMirror=False):
         slit = lcaption.split("|")
         slit[0] = re_sub(r'\{([^}]+)\}', lowerVars, slit[0])
         up_path = ospath.join(dirpath, prefile_)
-        dur, qual, lang, subs = await get_media_info(up_path, True)
+        dur, qual, lang, subs, bit_depth = await get_media_info(up_path, True)
         cap_mono = slit[0].format(
             filename = nfile_,
             size = get_readable_file_size(await aiopath.getsize(up_path)),
@@ -313,6 +313,7 @@ async def format_filename(file_, user_id, dirpath=None, isMirror=False):
             quality = qual,
             languages = lang,
             subtitles = subs,
+            video_bit_depth = bit_depth,
             md5_hash = get_md5_hash(up_path)
         )
         if len(slit) > 1:
