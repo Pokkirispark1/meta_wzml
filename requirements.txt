@@ -1,4 +1,4 @@
-aiohttp[speedups]
+aiohttp
 aiofiles
 aioshutil
 anytree==2.8.0
@@ -43,3 +43,4 @@ uv
 uvloop
 xattr
 yt-dlp
+pytz
