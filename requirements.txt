@@ -30,7 +30,7 @@ psutil
 pybase64
 pycountry
 pymongo
-pyrofork==2.2.11
+pyrogram==2.0.106
 python-dotenv
 python-magic
 qbittorrent-api
@@ -39,8 +39,6 @@ speedtest-cli
 telegraph
 tenacity
 tgcrypto
-uv
 uvloop
 xattr
 yt-dlp
-pytz
