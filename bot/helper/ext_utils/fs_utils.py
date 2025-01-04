@@ -12,6 +12,7 @@ from re import findall
 from subprocess import run as srun
 from sys import exit as sexit
 from time import time
+import aiofiles
 
 from .exceptions import NotSupportedExtractionArchive
 from bot import bot_cache, aria2, LOGGER, DOWNLOAD_DIR, get_client, GLOBAL_EXTENSION_FILTER
@@ -26,6 +27,50 @@ FIRST_SPLIT_REGEX = r'(\.|_)part0*1\.rar$|(\.|_)7z\.0*1$|(\.|_)zip\.0*1$|^(?!.*(
 
 SPLIT_REGEX = r'\.r\d+$|\.7z\.\d+$|\.z\d+$|\.zip\.\d+$'
 
+
+async def add_intro_to_subtitles(file_path: str, output_path: str, intro_text: str, duration: int = 5):
+    """
+    Adds an introductory subtitle to an SRT file for the specified duration.
+
+    Args:
+        file_path (str): Path to the input SRT file.
+        output_path (str): Path to the output SRT file.
+        intro_text (str): The text to add at the beginning of the subtitles.
+        duration (int): Duration in seconds for the intro subtitle. Default is 5 seconds.
+    """
+    try:
+        # Read the original subtitle file
+        async with aiofiles.open(file_path, mode='r', encoding='utf-8') as file:
+            content = await file.read()
+
+        # Create the new intro subtitle entry
+        intro_subtitle = f"""1
+00:00:00,000 --> 00:00:0{duration},000
+{intro_text}
+
+"""
+        # Increment all existing subtitle indices
+        existing_subtitles = content.split('\n\n')
+        updated_subtitles = []
+
+        for subtitle in existing_subtitles:
+            if subtitle.strip():  # Ignore empty lines
+                lines = subtitle.split('\n')
+                if lines[0].isdigit():  # Update the index
+                    lines[0] = str(int(lines[0]) + 1)
+                updated_subtitles.append('\n'.join(lines))
+
+        # Combine the intro and updated subtitles
+        updated_content = intro_subtitle + '\n\n'.join(updated_subtitles)
+
+        # Write to the new subtitle file
+        async with aiofiles.open(output_path, mode='w', encoding='utf-8') as file:
+            await file.write(updated_content)
+
+        LOGGER.info(f"Intro text added successfully to {output_path}")
+
+    except Exception as e:
+        LOGGER.error(f"An error occurred while adding intro: {e}")
 
 def is_first_archive_split(file):
     return bool(re_search(FIRST_SPLIT_REGEX, file))
