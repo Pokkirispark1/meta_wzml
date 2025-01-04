@@ -215,7 +215,7 @@ async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, 
     with open(subtitle_file, 'w') as f:
         f.write("1\n")
         f.write("00:00:00,000 --> 00:00:05,000\n")
-        f.write(f"{subtitle _text}\n\n")
+        f.write(f"{subtitle_text}\n\n")
         f.write("2\n")
         f.write("00:00:05,000 --> 00:00:10,000\n")
         f.write("Actual subtitles text here.\n")
