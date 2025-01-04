@@ -12,7 +12,7 @@ from re import findall
 from subprocess import run as srun
 from sys import exit as sexit
 from time import time
-import aiofiles
+import tempfile
 
 from .exceptions import NotSupportedExtractionArchive
 from bot import bot_cache, aria2, LOGGER, DOWNLOAD_DIR, get_client, GLOBAL_EXTENSION_FILTER
@@ -26,51 +26,6 @@ ARCH_EXT = [".tar.bz2", ".tar.gz", ".bz2", ".gz", ".tar.xz", ".tar", ".tbz2", ".
 FIRST_SPLIT_REGEX = r'(\.|_)part0*1\.rar$|(\.|_)7z\.0*1$|(\.|_)zip\.0*1$|^(?!.*(\.|_)part\d+\.rar$).*\.rar$'
 
 SPLIT_REGEX = r'\.r\d+$|\.7z\.\d+$|\.z\d+$|\.zip\.\d+$'
-
-
-async def add_intro_to_subtitles(file_path: str, output_path: str, intro_text: str, duration: int = 5):
-    """
-    Adds an introductory subtitle to an SRT file for the specified duration.
-
-    Args:
-        file_path (str): Path to the input SRT file.
-        output_path (str): Path to the output SRT file.
-        intro_text (str): The text to add at the beginning of the subtitles.
-        duration (int): Duration in seconds for the intro subtitle. Default is 5 seconds.
-    """
-    try:
-        # Read the original subtitle file
-        async with aiofiles.open(file_path, mode='r', encoding='utf-8') as file:
-            content = await file.read()
-
-        # Create the new intro subtitle entry
-        intro_subtitle = f"""1
-00:00:00,000 --> 00:00:0{duration},000
-{intro_text}
-
-"""
-        # Increment all existing subtitle indices
-        existing_subtitles = content.split('\n\n')
-        updated_subtitles = []
-
-        for subtitle in existing_subtitles:
-            if subtitle.strip():  # Ignore empty lines
-                lines = subtitle.split('\n')
-                if lines[0].isdigit():  # Update the index
-                    lines[0] = str(int(lines[0]) + 1)
-                updated_subtitles.append('\n'.join(lines))
-
-        # Combine the intro and updated subtitles
-        updated_content = intro_subtitle + '\n\n'.join(updated_subtitles)
-
-        # Write to the new subtitle file
-        async with aiofiles.open(output_path, mode='w', encoding='utf-8') as file:
-            await file.write(updated_content)
-
-        LOGGER.info(f"Intro text added successfully to {output_path}")
-
-    except Exception as e:
-        LOGGER.error(f"An error occurred while adding intro: {e}")
 
 def is_first_archive_split(file):
     return bool(re_search(FIRST_SPLIT_REGEX, file))
@@ -254,9 +209,17 @@ async def add_attachment(listener, base_dir: str, media_file: str, outfile: str,
         await clean_target(outfile)
                 
 async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, metadata: str = ''):
-    cmd = [bot_cache['pkgs'][2], '-hide_banner', '-ignore_unknown', '-i', media_file, '-metadata', f'title={metadata}', '-metadata:s:v',
-           f'title={metadata}', '-metadata:s:a', f'title={metadata}', '-metadata:s:s', f'title={metadata}', '-map', '0:v:0?',
-           '-map', '0:a:?', '-map', '0:s:?', '-c:v', 'copy', '-c:a', 'copy', '-c:s', 'copy', outfile, '-y']
+    # Add subtitles intro with a 5-second time gap
+    cmd = [
+        bot_cache['pkgs'][2], '-hide_banner', '-ignore_unknown', '-i', media_file,
+        '-metadata', f'title={metadata}', '-metadata:s:v', f'title={metadata}',
+        '-metadata:s:a', f'title={metadata}', '-metadata:s:s', f'title={metadata}',
+        '-vf', f"subtitles='drawtext=text=\"Join MovieMania on TG\":fontsize=24:fontcolor=white:x=(w-tw)/2:y=(h-th)/2:enable=between(t,0,5)'",
+        '-map', '0:v:0?', '-map', '0:a:?', '-map', '0:s:?',
+        '-c:v', 'copy', '-c:a', 'copy', '-c:s', 'copy',
+        outfile, '-y'
+    ]
+
     listener.suproc = await create_subprocess_exec(*cmd, stderr=PIPE)
     code = await listener.suproc.wait()
     if code == 0:
