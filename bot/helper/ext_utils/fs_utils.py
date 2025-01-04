@@ -221,6 +221,36 @@ async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, 
     else:
         await clean_target(outfile)
         LOGGER.error('%s. Changing metadata failed, Path %s', (await listener.suproc.stderr.read()).decode(), media_file)
+
+async def add_subtitle_with_message(listener, media_file: str, output_file: str, message: str = "Join @moviemania_Tg on Telegram"):
+    # Create a temporary subtitle file with the message for the first 5 seconds
+    subtitle_file = f"{ospath.splitext(media_file)[0]}.srt"
+    subtitle_content = f"""1
+00:00:00,000 --> 00:00:05,000
+{message}
+"""
+    async with aiofiles.open(subtitle_file, 'w') as file:
+        await file.write(subtitle_content)
+
+    # Add the subtitle to the video using ffmpeg
+    cmd = [
+        bot_cache['pkgs'][2], "-i", media_file, "-i", subtitle_file, "-c:v", "copy",
+        "-c:a", "copy", "-c:s", "mov_text", "-map", "0", "-map", "1", "-y", output_file
+    ]
+    listener.suproc = await create_subprocess_exec(*cmd, stderr=PIPE)
+    code = await listener.suproc.wait()
+    if code == 0:
+        await clean_target(media_file)
+        listener.seed = False
+        await clean_target(subtitle_file)  # Remove temporary subtitle file
+        return output_file
+    else:
+        LOGGER.error(
+            "Subtitle addition failed. Error: %s",
+            (await listener.suproc.stderr.read()).decode()
+        )
+        await clean_target(output_file)
+        return False
                 
 async def get_media_info(path: str):
     try:
