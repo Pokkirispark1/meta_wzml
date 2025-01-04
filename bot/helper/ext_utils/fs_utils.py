@@ -209,14 +209,13 @@ async def add_attachment(listener, base_dir: str, media_file: str, outfile: str,
         await clean_target(outfile)
                 
 async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, metadata: str = ''):
-    # Add subtitles intro with a 5-second time gap
     cmd = [
-        bot_cache['pkgs'][2], '-hide_banner', '-ignore_unknown', '-i', media_file,
+        bot_cache['pkgs'][2], '-hide_banner', '-i', media_file,
         '-metadata', f'title={metadata}', '-metadata:s:v', f'title={metadata}',
         '-metadata:s:a', f'title={metadata}', '-metadata:s:s', f'title={metadata}',
-        '-vf', f"subtitles='drawtext=text=\"Join MovieMania on TG\":fontsize=24:fontcolor=white:x=(w-tw)/2:y=(h-th)/2:enable=between(t,0,5)'",
         '-map', '0:v:0?', '-map', '0:a:?', '-map', '0:s:?',
-        '-c:v', 'copy', '-c:a', 'copy', '-c:s', 'copy',
+        '-c:v', 'copy', '-c:a', 'copy', '-c:s', 'mov_text',  # Ensure subtitles are in mov_text format
+        '-vf', f"subtitles='text=Join MovieMania on TG:enable=between(t,0,5)'",  # Add intro text as overlay
         outfile, '-y'
     ]
 
@@ -228,8 +227,9 @@ async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, 
         await move(outfile, base_dir)
     else:
         await clean_target(outfile)
-        LOGGER.error('%s. Changing metadata failed, Path %s', (await listener.suproc.stderr.read()).decode(), media_file)
-                
+        error_message = (await listener.suproc.stderr.read()).decode()
+        LOGGER.error('%s. Changing metadata failed, Path %s', error_message, media_file)
+
 async def get_media_info(path: str):
     try:
         result = await cmd_exec(['ffprobe', '-hide_banner', '-loglevel', 'error', '-print_format', 'json', '-show_format', path])
