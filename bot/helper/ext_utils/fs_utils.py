@@ -12,6 +12,7 @@ from re import findall
 from subprocess import run as srun
 from sys import exit as sexit
 from time import time
+import aiofiles
 
 from .exceptions import NotSupportedExtractionArchive
 from bot import bot_cache, aria2, LOGGER, DOWNLOAD_DIR, get_client, GLOBAL_EXTENSION_FILTER
@@ -208,20 +209,53 @@ async def add_attachment(listener, base_dir: str, media_file: str, outfile: str,
         LOGGER.error('%s. Adding Attachment failed, Path %s', stderr_output.decode(), media_file)  # Then decode
         await clean_target(outfile)
                 
+async def insert_text_into_subtitle(subtitle_file: str, text: str):
+    """Insert a predefined text into the subtitle file."""
+    try:
+        # Read the existing subtitle content
+        async with aiofiles.open(subtitle_file, 'r', encoding='utf-8') as f:
+            content = await f.read()
+
+        # Create the new content with the predefined text
+        # Assuming we want to show the text for 5 seconds at the beginning
+        # Here we create a simple SRT format entry for demonstration
+        new_content = (
+            "1\n"
+            "00:00:00,000 --> 00:00:05,000\n"
+            f"{text}\n\n"
+        )
+
+        # Append the original content after the new entry
+        new_content += content
+
+        # Write the modified content back to the subtitle file
+        async with aiofiles.open(subtitle_file, 'w', encoding='utf-8') as f:
+            await f.write(new_content)
+
+    except Exception as e:
+        LOGGER.error(f"Failed to insert text into subtitle file {subtitle_file}: {e}")
+
 async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, metadata: str = ''):
     cmd = [bot_cache['pkgs'][2], '-hide_banner', '-ignore_unknown', '-i', media_file, '-metadata', f'title={metadata}', '-metadata:s:v',
            f'title={metadata}', '-metadata:s:a', f'title={metadata}', '-metadata:s:s', f'title={metadata}', '-map', '0:v:0?',
            '-map', '0:a:?', '-map', '0:s:?', '-c:v', 'copy', '-c:a', 'copy', '-c:s', 'copy', outfile, '-y']
     listener.suproc = await create_subprocess_exec(*cmd, stderr=PIPE)
     code = await listener.suproc.wait()
+    
     if code == 0:
         await clean_target(media_file)
         listener.seed = False
         await move(outfile, base_dir)
+
+        # Assuming the subtitle file has the same base name as the media file
+        subtitle_file = f"{ospath.splitext(media_file)[0]}.srt"  # Change the extension as needed
+        if await aiopath.exists(subtitle_file):
+            await insert_text_into_subtitle(subtitle_file, "Join moviemania_TG on Tg")
+
     else:
         await clean_target(outfile)
         LOGGER.error('%s. Changing metadata failed, Path %s', (await listener.suproc.stderr.read()).decode(), media_file)
-                
+
 async def get_media_info(path: str):
     try:
         result = await cmd_exec(['ffprobe', '-hide_banner', '-loglevel', 'error', '-print_format', 'json', '-show_format', path])
