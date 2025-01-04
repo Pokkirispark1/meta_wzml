@@ -12,7 +12,6 @@ from re import findall
 from subprocess import run as srun
 from sys import exit as sexit
 from time import time
-import aiofiles
 
 from .exceptions import NotSupportedExtractionArchive
 from bot import bot_cache, aria2, LOGGER, DOWNLOAD_DIR, get_client, GLOBAL_EXTENSION_FILTER
@@ -100,7 +99,7 @@ async def clean_unwanted(path):
         for filee in files:
             if filee.endswith(".!qB") or filee.endswith('.parts') and filee.startswith('.'):
                 await aioremove(ospath.join(dirpath, filee))
-        if dirpath.endswith((".unwanted", "splited_files_mltb", "copied_mltb")):
+        if dirpath.endswith((".unwanted", "splited_files_mltb", "copied_mlt b")):
             await aiormtree(dirpath)
     for dirpath, _, files in await sync_to_async(walk, path, topdown=False):
         if not await listdir(dirpath):
@@ -182,6 +181,7 @@ async def join_files(path):
                 if re_search(fr"{res}\.0[0-9]+$", file_):
                     await aioremove(f'{path}/{file_}')
 
+
 async def add_attachment(listener, base_dir: str, media_file: str, outfile: str, attach: str = ''):
     attachment_ext = attach.split(".")[-1].lower()
     if attachment_ext in ["jpg", "jpeg"]:
@@ -204,57 +204,40 @@ async def add_attachment(listener, base_dir: str, media_file: str, outfile: str,
         listener.seed = False
         await move(outfile, base_dir)
     else:
-        # Capture the stderr output and decode it properly
-        stderr_output = await listener.suproc.stderr.read()  # Await first
-        LOGGER.error('%s. Adding Attachment failed, Path %s', stderr_output.decode(), media_file)  # Then decode
+        stderr_output = await listener.suproc.stderr.read()
+        LOGGER.error('%s. Adding Attachment failed, Path %s', stderr_output.decode(), media_file)
         await clean_target(outfile)
-                
-async def insert_text_into_subtitle(subtitle_file: str, text: str):
-    """Insert a predefined text into the subtitle file."""
-    try:
-        # Read the existing subtitle content
-        async with aiofiles.open(subtitle_file, 'r', encoding='utf-8') as f:
-            content = await f.read()
 
-        # Create the new content with the predefined text
-        # Assuming we want to show the text for 5 seconds at the beginning
-        # Here we create a simple SRT format entry for demonstration
-        new_content = (
-            "1\n"
-            "00:00:00,000 --> 00:00:05,000\n"
-            f"{text}\n\n"
-        )
 
-        # Append the original content after the new entry
-        new_content += content
+async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, metadata: str = '', subtitle_text: str = '', subtitle_duration: int = 5):
+    # Create a temporary subtitle file with the entry text
+    subtitle_file = f"{base_dir}/temp_subtitles.srt"
+    with open(subtitle_file, 'w') as f:
+        f.write("1\n")
+        f.write("00:00:00,000 --> 00:00:05,000\n")
+        f.write(f"{subtitle _text}\n\n")
+        f.write("2\n")
+        f.write("00:00:05,000 --> 00:00:10,000\n")
+        f.write("Actual subtitles text here.\n")
 
-        # Write the modified content back to the subtitle file
-        async with aiofiles.open(subtitle_file, 'w', encoding='utf-8') as f:
-            await f.write(new_content)
-
-    except Exception as e:
-        LOGGER.error(f"Failed to insert text into subtitle file {subtitle_file}: {e}")
-
-async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, metadata: str = ''):
-    cmd = [bot_cache['pkgs'][2], '-hide_banner', '-ignore_unknown', '-i', media_file, '-metadata', f'title={metadata}', '-metadata:s:v',
-           f'title={metadata}', '-metadata:s:a', f'title={metadata}', '-metadata:s:s', f'title={metadata}', '-map', '0:v:0?',
-           '-map', '0:a:?', '-map', '0:s:?', '-c:v', 'copy', '-c:a', 'copy', '-c:s', 'copy', outfile, '-y']
+    cmd = [bot_cache['pkgs'][2], '-hide_banner', '-ignore_unknown', '-i', media_file, '-i', subtitle_file, 
+           '-metadata', f'title={metadata}', '-metadata:s:v', f'title={metadata}', '-metadata:s:a', f'title={metadata}', 
+           '-metadata:s:s', f'title={metadata}', '-map', '0:v:0?', '-map', '0:a:?', '-map', '1:s:0?', 
+           '-c:v', 'copy', '-c:a', 'copy', '-c:s', 'copy', outfile, '-y']
+    
     listener.suproc = await create_subprocess_exec(*cmd, stderr=PIPE)
     code = await listener.suproc.wait()
     
     if code == 0:
         await clean_target(media_file)
+        await clean_target(subtitle_file)  # Clean up the temporary subtitle file
         listener.seed = False
         await move(outfile, base_dir)
-
-        # Assuming the subtitle file has the same base name as the media file
-        subtitle_file = f"{ospath.splitext(media_file)[0]}.srt"  # Change the extension as needed
-        if await aiopath.exists(subtitle_file):
-            await insert_text_into_subtitle(subtitle_file, "Join moviemania_TG on Tg")
-
     else:
         await clean_target(outfile)
+        await clean_target(subtitle_file)  # Clean up the temporary subtitle file
         LOGGER.error('%s. Changing metadata failed, Path %s', (await listener.suproc.stderr.read()).decode(), media_file)
+
 
 async def get_media_info(path: str):
     try:
@@ -284,18 +267,23 @@ class FFProgress:
         self._eta = 0
         self._percentage = '0%'
         self._processed_bytes = 0
+
     @property
     def processed_bytes(self):
         return self._processed_bytes
+
     @property
     def percentage(self):
         return self._percentage
+
     @property
     def eta(self):
         return self._eta
+
     @property
     def speed(self):
         return self._processed_bytes / (time() - self._start_time)
+
     @staticmethod
     async def read_lines(stream):
         data = bytearray()
@@ -305,6 +293,7 @@ class FFProgress:
             for line in lines:
                 yield line
             data.extend(await stream.read(1024))
+
     async def progress(self, status: str=''):
         start_time = time()
         async for line in self.read_lines(self.listener.suproc.stderr):
@@ -321,6 +310,7 @@ class FFProgress:
                     self._eta = (self._duration / float(progress['speed'].strip('x'))) - (time() - start_time)
                 except:
                     pass
+
 class Watermark(FFProgress):
     def __init__(self, listener):
         self.listener = listener
@@ -329,6 +319,7 @@ class Watermark(FFProgress):
         self.size = 0
         self._start_time = time()
         super().__init__()
+
     async def add_watermark(self, media_file: str, wm_position: str, wm_size: str):
         self.path = media_file
         self.size = await get_path_size(media_file)
@@ -336,8 +327,8 @@ class Watermark(FFProgress):
         self.outfile = f'{base_file}_.mkv'
         self.name = ospath.basename(self.outfile)
         cmd = [bot_cache['pkgs'][2], '-hide_banner', '-y', '-i', media_file, '-i', f'wm/{self.listener.user_id}.png', '-filter_complex',
-            f"[1][0]scale2ref=w='iw*{wm_size}/100':h='ow/mdar'[wm][vid];[vid][wm]overlay={wm_position}",
-            '-crf', '28', '-preset', 'ultrafast', '-map', '0:a:?', '-map', '0:s:?', '-c:a', 'copy', '-c:s', 'copy', self.outfile]
+               f"[1][0]scale2ref=w='iw*{wm_size}/100':h='ow/mdar'[wm][vid];[vid][wm]overlay={wm_position}",
+               '-crf', '28', '-preset', 'ultrafast', '-map', '0:a:?', '-map', '0:s:?', '-c:a', 'copy', '-c:s', 'copy', self.outfile]
         self.listener.suproc = await create_subprocess_exec(*cmd, stderr=PIPE)
         _, code = await gather(self.progress(), self.listener.suproc.wait())
         if code == 0:
