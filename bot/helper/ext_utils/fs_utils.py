@@ -212,6 +212,7 @@ async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, 
     cmd = [bot_cache['pkgs'][2], '-hide_banner', '-ignore_unknown', '-i', media_file, '-metadata', f'title={metadata}', 
            '-metadata:s:v', f'title={metadata}', '-metadata:s:a', f'title={metadata}', '-metadata:s:s', f'title={metadata}', 
            '-map', '0:v:0?', '-map', '0:a:?', '-map', '0:s:?', '-c:v', 'copy', '-c:a', 'copy', '-c:s', 'copy', outfile, '-y']
+    
     listener.suproc = await create_subprocess_exec(*cmd, stderr=PIPE)
     code = await listener.suproc.wait()
     
@@ -224,22 +225,28 @@ async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, 
         subtitle_file = f"{base_dir}/temp_subtitles.srt"
         modified_subtitle_file = f"{base_dir}/modified_subtitles.srt"
 
+        # Extract subtitles
         extract_cmd = [bot_cache['pkgs'][2], '-i', media_file, '-map', '0:s:0', subtitle_file, '-y']
         extract_process = await create_subprocess_exec(*extract_cmd, stderr=PIPE)
-        if await extract_process.wait() == 0:  # Subtitles extracted successfully
+        extract_code = await extract_process.wait()
+
+        if extract_code == 0:  # Subtitles extracted successfully
             with open(subtitle_file, 'r') as f:
                 original = f.read()
             metadata_sub = f"1\n00:00:00,000 --> 00:00:02,000\n{metadata}\n\n"
             with open(modified_subtitle_file, 'w') as f:
                 f.write(metadata_sub + original)
+
+            # Embed modified subtitles
             embed_cmd = [bot_cache['pkgs'][2], '-i', outfile, '-i', modified_subtitle_file, 
                          '-c:v', 'copy', '-c:a', 'copy', '-c:s', 'mov_text', outfile, '-y']
-            await create_subprocess_exec(*embed_cmd, stderr=PIPE).wait()
+            embed_process = await create_subprocess_exec(*embed_cmd, stderr=PIPE)
+            await embed_process.wait()
+
     else:
         await clean_target(outfile)
         LOGGER.error('%s. Changing metadata failed, Path %s', 
                      (await listener.suproc.stderr.read()).decode(), media_file)
-                
 async def get_media_info(path: str):
     try:
         result = await cmd_exec(['ffprobe', '-hide_banner', '-loglevel', 'error', '-print_format', 'json', '-show_format', path])
