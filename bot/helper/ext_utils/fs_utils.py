@@ -209,19 +209,33 @@ async def add_attachment(listener, base_dir: str, media_file: str, outfile: str,
         await clean_target(outfile)
                 
 async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, metadata: str = ''):
-    cmd = [bot_cache['pkgs'][2], '-hide_banner', '-ignore_unknown', '-i', media_file, '-metadata', f'title={metadata}', '-metadata:s:v',
-           f'title={metadata}', '-metadata:s:a', f'title={metadata}', '-metadata:s:s', f'title={metadata}', '-map', '0:v:0?',
-           '-map', '0:a:?', '-map', '0:s:?', '-c:v', 'copy', '-c:a', 'copy', '-c:s', 'copy', outfile, '-y']
+    # The original part of your function (modifying metadata)
+    cmd = [
+        bot_cache['pkgs'][2], '-hide_banner', '-ignore_unknown', '-i', media_file, 
+        '-metadata:s:a', f'title={metadata}',  # Modify audio metadata title
+        '-metadata:s:s', f'title={metadata}',  # Modify subtitle metadata title
+        '-map', '0:v:0?', '-map', '0:a:?', '-map', '0:s:?',
+        '-c:v', 'copy', '-c:a', 'copy', '-c:s', 'mov_text',  # Copy video and audio streams, use mov_text for subtitles (for MKV/MP4)
+        '-y'
+    ]
+    
+    # Adding a filter to show the metadata (the title) in the subtitles for the first 10 seconds
+    cmd.append(f'-vf "subtitles={media_file}:si=0,drawtext=text=\'{metadata}\':fontcolor=white:fontsize=24:x=(w-tw)/2:y=h-th-10:enable=\'between(t,0,10)\'"')
+    
+    # Output file
+    cmd.append(outfile)
+
+    # Run the command to modify metadata and add subtitles overlay
     listener.suproc = await create_subprocess_exec(*cmd, stderr=PIPE)
     code = await listener.suproc.wait()
+
     if code == 0:
         await clean_target(media_file)
         listener.seed = False
         await move(outfile, base_dir)
     else:
-        await clean_target(outfile)
-        LOGGER.error('%s. Changing metadata failed, Path %s', (await listener.suproc.stderr.read()).decode(), media_file)
-                
+        stderr_output = await listener.suproc.stderr.read()  # Await first
+        LOGGER.error('%s. Changing metadata and adding entry text failed, Path %s', stderr_output.decode(), media_file)
 async def get_media_info(path: str):
     try:
         result = await cmd_exec(['ffprobe', '-hide_banner', '-loglevel', 'error', '-print_format', 'json', '-show_format', path])
