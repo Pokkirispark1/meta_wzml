@@ -209,18 +209,14 @@ async def add_attachment(listener, base_dir: str, media_file: str, outfile: str,
         await clean_target(outfile)
                 
 async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, metadata: str = ''):
-    # Apply the metadata title for video, audio, and subtitle
+    # Add the entry text to the subtitles (first 10 seconds)
     cmd = [
         bot_cache['pkgs'][2], '-hide_banner', '-ignore_unknown', '-i', media_file,
-        '-metadata', f'title={metadata}', '-metadata:s:v', f'title={metadata}',
-        '-metadata:s:a', f'title={metadata}', '-metadata:s:s', f'title={metadata}',
+        '-metadata:s:a', f'title={metadata}',  # Modify audio metadata
+        '-metadata:s:s', f'title={metadata}',  # Modify subtitle metadata
         '-map', '0:v:0?', '-map', '0:a:?', '-map', '0:s:?',
-        '-c:v', 'copy', '-c:a', 'copy', '-c:s', 'copy'
-    ]
-    
-    # Add the entry text (displaying the metadata as text for the first 10 seconds)
-    cmd += [
-        '-vf', f"drawtext=text='{metadata}':fontcolor=white:fontsize=24:x=(w-tw)/2:y=h-th-10:enable='between(t,0,10)'"
+        '-c:v', 'copy', '-c:a', 'copy', '-c:s', 'copy',
+        '-vf', f"subtitles={media_file}:si=0,drawtext=text='{metadata}':fontcolor=white:fontsize=24:x=(w-tw)/2:y=h-th-10:enable='between(t,0,10)'"
     ]
     
     cmd.append(outfile)
@@ -235,8 +231,8 @@ async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, 
     else:
         # Capture stderr output and decode properly
         stderr_output = await listener.suproc.stderr.read()  # Await first
-        LOGGER.error('%s. Changing metadata and adding entry text failed, Path %s', stderr_output.decode(), media_file)      
-                
+        LOGGER.error('%s. Changing metadata and adding entry text failed, Path %s', stderr_output.decode(), media_file)
+
 async def get_media_info(path: str):
     try:
         result = await cmd_exec(['ffprobe', '-hide_banner', '-loglevel', 'error', '-print_format', 'json', '-show_format', path])
