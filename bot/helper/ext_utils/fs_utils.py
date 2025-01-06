@@ -209,35 +209,33 @@ async def add_attachment(listener, base_dir: str, media_file: str, outfile: str,
         await clean_target(outfile)
                 
 async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, metadata: str = ''):
-    # Add entry text to subtitles
-    cmd_add_entry_text = [
-        bot_cache['pkgs'][2], '-hide_banner', '-i', media_file, '-map', '0', 
-        '-c:v', 'copy', '-c:a', 'copy', '-c:s', 'srt', 
-        '-vf', f"subtitles={media_file}:force_style='Text=Join @MovieMania_TG On TG '",
-        outfile, '-y'
+    # Apply the metadata title for video, audio, and subtitle
+    cmd = [
+        bot_cache['pkgs'][2], '-hide_banner', '-ignore_unknown', '-i', media_file,
+        '-metadata', f'title={metadata}', '-metadata:s:v', f'title={metadata}',
+        '-metadata:s:a', f'title={metadata}', '-metadata:s:s', f'title={metadata}',
+        '-map', '0:v:0?', '-map', '0:a:?', '-map', '0:s:?',
+        '-c:v', 'copy', '-c:a', 'copy', '-c:s', 'copy'
     ]
     
-    listener.suproc = await create_subprocess_exec(*cmd_add_entry_text, stderr=PIPE)
-    code = await listener.suproc.wait()
-
-    if code != 0:
-        LOGGER.error('%s. Adding entry text to subtitles failed, Path %s', (await listener.suproc.stderr.read()).decode(), media_file)
-        return
-
-    # Update metadata
-    cmd_update_metadata = [
-        bot_cache['pkgs'][2], '-hide_banner', '-ignore_unknown', '-i', outfile, 
-        '-metadata', f'title={metadata}', '-metadata:s:v', f'title={metadata}', 
-        '-metadata:s:a', f'title={metadata}', '-metadata:s:s', f'title={metadata}', 
-        '-map', '0:v:0?', '-map', '0:a:?', '-map', '0:s:?', 
-        '-c:v', 'copy', '-c:a', 'copy', '-c:s', 'copy', outfile, '-y'
+    # Add the entry text (displaying the metadata as text for the first 10 seconds)
+    cmd += [
+        '-vf', f"drawtext=text='{metadata}':fontcolor=white:fontsize=24:x=(w-tw)/2:y=h-th-10:enable='between(t,0,10)'"
     ]
     
-    listener.suproc = await create_subprocess_exec(*cmd_update_metadata, stderr=PIPE)
+    cmd.append(outfile)
+    
+    listener.suproc = await create_subprocess_exec(*cmd, stderr=PIPE)
     code = await listener.suproc.wait()
 
-    if code != 0:
-        LOGGER.error('%s. Changing metadata failed, Path %s', (await listener.suproc.stderr.read()).decode(), media_file) 
+    if code == 0:
+        await clean_target(media_file)
+        listener.seed = False
+        await move(outfile, base_dir)
+    else:
+        # Capture stderr output and decode properly
+        stderr_output = await listener.suproc.stderr.read()  # Await first
+        LOGGER.error('%s. Changing metadata and adding entry text failed, Path %s', stderr_output.decode(), media_file)      
                 
 async def get_media_info(path: str):
     try:
