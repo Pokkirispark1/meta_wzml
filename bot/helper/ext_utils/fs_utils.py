@@ -2,7 +2,7 @@
 from os import walk, path as ospath
 from aiofiles.os import remove as aioremove, path as aiopath, listdir, rmdir, makedirs
 from aioshutil import rmtree as aiormtree, move
-from shutil import rmtree, disk_usage
+from shutil import rmtree, disk_usage, move
 from json import loads as jsonloads
 from magic import Magic
 from asyncio import create_subprocess_exec, gather, sleep
@@ -207,13 +207,31 @@ async def add_attachment(listener, base_dir: str, media_file: str, outfile: str,
         stderr_output = await listener.suproc.stderr.read()  # Await first
         LOGGER.error('%s. Adding Attachment failed, Path %s', stderr_output.decode(), media_file)  # Then decode
         await clean_target(outfile)
-                
+
 async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, metadata: str = ''):
-    cmd = [bot_cache['pkgs'][2], '-hide_banner', '-ignore_unknown', '-i', media_file, '-metadata', f'title={metadata}', '-metadata:s:v',
-           f'title={metadata}', '-metadata:s:a', f'title={metadata}', '-metadata:s:s', f'title={metadata}', '-map', '0:v:0?',
-           '-map', '0:a:?', '-map', '0:s:?', '-c:v', 'copy', '-c:a', 'copy', '-c:s', 'copy', outfile, '-y']
+    # Create a temporary subtitle file with the new name
+    temp_subtitle_file = os.path.join(base_dir, '@Moviemania_TG.srt')
+    
+    with open(temp_subtitle_file, 'w') as f:
+        f.write("1\n")
+        f.write("00:00:00,000 --> 00:00:10,000\n")
+        f.write(f"{metadata}\n\n")
+
+    cmd = [
+        bot_cache['pkgs'][2], '-hide_banner', '-ignore_unknown', '-i', media_file,
+        '-i', temp_subtitle_file,  # Add the temporary subtitle file
+        '-metadata', f'title={metadata}', '-metadata:s:v', f'title={metadata}',
+        '-metadata:s:a', f'title={metadata}', '-metadata:s:s', f'title={metadata}',
+        '-map', '0:v:0?', '-map', '0:a:?', '-map', '0:s:?', '-map', '1:s:0',  # Map the temp subtitle
+        '-c:v', 'copy', '-c:a', 'copy', '-c:s', 'copy', outfile, '-y'
+    ]
+    
     listener.suproc = await create_subprocess_exec(*cmd, stderr=PIPE)
     code = await listener.suproc.wait()
+    
+    # Clean up the temporary subtitle file
+    os.remove(temp_subtitle_file)
+
     if code == 0:
         await clean_target(media_file)
         listener.seed = False
@@ -221,7 +239,7 @@ async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, 
     else:
         await clean_target(outfile)
         LOGGER.error('%s. Changing metadata failed, Path %s', (await listener.suproc.stderr.read()).decode(), media_file)
-                
+
 async def get_media_info(path: str):
     try:
         result = await cmd_exec(['ffprobe', '-hide_banner', '-loglevel', 'error', '-print_format', 'json', '-show_format', path])
