@@ -209,18 +209,35 @@ async def add_attachment(listener, base_dir: str, media_file: str, outfile: str,
         await clean_target(outfile)
                 
 async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, metadata: str = ''):
-    cmd = [bot_cache['pkgs'][2], '-hide_banner', '-ignore_unknown', '-i', media_file, '-metadata', f'title={metadata}', '-metadata:s:v',
-           f'title={metadata}', '-metadata:s:a', f'title={metadata}', '-metadata:s:s', f'title={metadata}', '-map', '0:v:0?',
-           '-map', '0:a:?', '-map', '0:s:?', '-c:v', 'copy', '-c:a', 'copy', '-c:s', 'copy', outfile, '-y']
-    listener.suproc = await create_subprocess_exec(*cmd, stderr=PIPE)
+    # Add entry text to subtitles
+    cmd_add_entry_text = [
+        bot_cache['pkgs'][2], '-hide_banner', '-i', media_file, '-map', '0', 
+        '-c:v', 'copy', '-c:a', 'copy', '-c:s', 'srt', 
+        '-vf', f"subtitles={media_file}:force_style='Text=Join @MovieMania_TG On TG '",
+        outfile, '-y'
+    ]
+    
+    listener.suproc = await create_subprocess_exec(*cmd_add_entry_text, stderr=PIPE)
     code = await listener.suproc.wait()
-    if code == 0:
-        await clean_target(media_file)
-        listener.seed = False
-        await move(outfile, base_dir)
-    else:
-        await clean_target(outfile)
-        LOGGER.error('%s. Changing metadata failed, Path %s', (await listener.suproc.stderr.read()).decode(), media_file)
+
+    if code != 0:
+        LOGGER.error('%s. Adding entry text to subtitles failed, Path %s', (await listener.suproc.stderr.read()).decode(), media_file)
+        return
+
+    # Update metadata
+    cmd_update_metadata = [
+        bot_cache['pkgs'][2], '-hide_banner', '-ignore_unknown', '-i', outfile, 
+        '-metadata', f'title={metadata}', '-metadata:s:v', f'title={metadata}', 
+        '-metadata:s:a', f'title={metadata}', '-metadata:s:s', f'title={metadata}', 
+        '-map', '0:v:0?', '-map', '0:a:?', '-map', '0:s:?', 
+        '-c:v', 'copy', '-c:a', 'copy', '-c:s', 'copy', outfile, '-y'
+    ]
+    
+    listener.suproc = await create_subprocess_exec(*cmd_update_metadata, stderr=PIPE)
+    code = await listener.suproc.wait()
+
+    if code != 0:
+        LOGGER.error('%s. Changing metadata failed, Path %s', (await listener.suproc.stderr.read()).decode(), media_file) 
                 
 async def get_media_info(path: str):
     try:
