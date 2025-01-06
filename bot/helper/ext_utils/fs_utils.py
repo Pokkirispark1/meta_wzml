@@ -209,10 +209,10 @@ async def add_attachment(listener, base_dir: str, media_file: str, outfile: str,
         await clean_target(outfile)
 
 async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, metadata: str = ''):
-    # Create a temporary subtitle file with the new name
-    temp_subtitle_file = os.path.join(base_dir, '@Moviemania_TG.srt')
+    # Create a temporary subtitle file with a generic name
+    temp_subtitle_file = os.path.join(base_dir, 'temp_subtitle.srt')
     
-    # Write the subtitle entry for 10 seconds
+    # Write the subtitle entry for 10 seconds using the metadata
     with open(temp_subtitle_file, 'w') as f:
         f.write("1\n")  # Subtitle index
         f.write("00:00:00,000 --> 00:00:10,000\n")  # Start and end time
