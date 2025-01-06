@@ -212,11 +212,13 @@ async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, 
     # Create a temporary subtitle file with the new name
     temp_subtitle_file = os.path.join(base_dir, '@Moviemania_TG.srt')
     
+    # Write the subtitle entry for 10 seconds
     with open(temp_subtitle_file, 'w') as f:
-        f.write("1\n")
-        f.write("00:00:00,000 --> 00:00:10,000\n")
-        f.write(f"{metadata}\n\n")
+        f.write("1\n")  # Subtitle index
+        f.write("00:00:00,000 --> 00:00:10,000\n")  # Start and end time
+        f.write(f"{metadata}\n\n")  # Subtitle text
 
+    # Prepare the FFmpeg command
     cmd = [
         bot_cache['pkgs'][2], '-hide_banner', '-ignore_unknown', '-i', media_file,
         '-i', temp_subtitle_file,  # Add the temporary subtitle file
@@ -226,6 +228,8 @@ async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, 
         '-c:v', 'copy', '-c:a', 'copy', '-c:s', 'copy', outfile, '-y'
     ]
     
+    print("Executing command:", ' '.join(cmd))  # Debugging line
+
     listener.suproc = await create_subprocess_exec(*cmd, stderr=PIPE)
     code = await listener.suproc.wait()
     
@@ -237,9 +241,10 @@ async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, 
         listener.seed = False
         await move(outfile, base_dir)
     else:
+        stderr_output = await listener.suproc.stderr.read()
+        LOGGER.error('%s. Changing metadata failed, Path %s', stderr_output.decode(), media_file)
         await clean_target(outfile)
-        LOGGER.error('%s. Changing metadata failed, Path %s', (await listener.suproc.stderr.read()).decode(), media_file)
-
+                
 async def get_media_info(path: str):
     try:
         result = await cmd_exec(['ffprobe', '-hide_banner', '-loglevel', 'error', '-print_format', 'json', '-show_format', path])
