@@ -245,7 +245,7 @@ async def modify_srt(temp_srt_path: str, new_sub_path: str, intro_text: str):
         for block in blocks:
             f.writelines(block)
 
-async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, metadata: str = '', intro_text: str = 'Intro'):
+async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, metadata: str = '', intro_text: str = 'JOIN @MOVIEMANIA_TG FOR MORE'):
     """Edit metadata and handle subtitles in a media file."""
     # Probe for subtitle streams
     cmd_probe = [bot_cache['pkgs'][1], '-v', 'error', '-select_streams', 's', '-show_entries', 'stream=index', '-of', 'csv=p=0', media_file]
