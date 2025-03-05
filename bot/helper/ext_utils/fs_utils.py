@@ -214,24 +214,24 @@ ffmpeg -hide_banner -ignore_unknown -i input.mkv -i sub.srt -map 0 -map 1:0 -c c
 async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, metadata: str = ''):
     subPath ="bot/util/sub.ass"
     cmd = [
-        bot_cache['pkgs'][2],  # FFmpeg executable
-        '-hide_banner', 
-        '-ignore_unknown', 
-        '-i', media_file,  # Input video 
-        '-i', subPath,     # Input subtitle 
-        '-map', '1:0',     # Map first the subtitle stream (index 1)
-        '-map', '0',       # Then map all streams from first input (video)
-        '-c', 'copy',      # Copy video and audio streams
-        '-c:s', 'ass',     # Encode subtitles as ASS
-        '-metadata', f'title={metadata}',  # Overall title 
-        '-metadata:s:v:0', f'title={metadata}',  # Video stream title
-        '-metadata:s:a:0', f'title={metadata}',  # Audio stream title 
-        '-metadata:s:s:0', f'title={metadata}',   # Subtitle stream title
-        '-disposition:s:0', 'default+forced',  # Set first subtitle stream as default and forced
-        '-disposition:s', 'none',  # Remove default disposition from other subtitle streams
-        '-y',              # Overwrite output file 
-        outfile            # Output filename
-    ]
+    bot_cache['pkgs'][2],  # FFmpeg executable
+    '-hide_banner', 
+    '-ignore_unknown', 
+    '-i', media_file,  # Input video 
+    '-i', subPath,     # Input subtitle 
+    '-map', '1:0',     # Map first the subtitle stream (index 1)
+    '-map', '0',       # Then map all streams from first input (video)
+    '-c', 'copy',      # Copy video and audio streams
+    '-c:s', 'ass',     # Encode subtitles as ASS
+    '-metadata', f'title={metadata}',  # Overall title 
+    '-metadata:s:v:0', f'title={metadata}',  # Video stream title
+    '-metadata:s:a:0', f'title={metadata}',  # Audio stream title 
+    '-metadata:s:s:0', f'title={metadata}',   # Subtitle stream title
+    '-disposition:s:0', 'default+forced',  # Set first subtitle stream as default and forced
+    '-disposition:s', 'none',  # Remove default disposition from other subtitle streams
+    '-y',              # Overwrite output file 
+    outfile            # Output filename
+]
     
     listener.suproc = await create_subprocess_exec(*cmd, stderr=PIPE)
     code = await listener.suproc.wait()
