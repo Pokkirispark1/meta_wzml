@@ -227,7 +227,7 @@ async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, 
         '-metadata:s:v:0', f'title={metadata}',  # Video stream title
         '-metadata:s:a:0', f'title={metadata}',  # Audio stream title 
         '-metadata:s', f'title={metadata}',   # Subtitle stream title
-        '-disposition:s', 'default+forced',  # Set subtitle disposition 
+        '-disposition:s:0', 'default+forced',  # Set subtitle disposition 
         '-y',              # Overwrite output file 
         outfile            # Output filename
     ]
