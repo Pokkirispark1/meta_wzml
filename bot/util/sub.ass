@@ -1,14 +1,14 @@
 [Script Info]
-Title: Burning Text Effect
-ScriptType: v4.00+
-PlayResX: 1280
-PlayResY: 720
-ScaledBorderAndShadow: yes
+Title: Moving Bold Red Text  
+ScriptType: v4.00+  
+PlayResX: 1280  
+PlayResY: 720  
+ScaledBorderAndShadow: yes  
 
-[V4+ Styles]
-Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: FireText,Impact,50,&H000033FF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,4,8,2,30,30,30,1
+[V4+ Styles]  
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding  
+Style: BoldRedText,Impact,50,&H000000FF,&H000000FF,&H00000000,&H80000000,1,0,0,0,100,100,0,0,1,4,8,2,30,30,30,1  
 
-[Events]
-Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-Dialogue: 0,0:00:01.00,0:00:10.00,FireText,,0,0,0,,{\move(640,700,640,680)}{\fad(200,200)}{\blur5}{\c&H0000FF&}{\t(0,500,\c&HFF4500&)}{\t(500,1000,\c&HFF0000&)}{\t(1000,1500,\c&HFFFF00&)}Join @Moviemania_TG on Telegram For More!
+[Events]  
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text  
+Dialogue: 0,0:00:01.00,0:00:10.00,BoldRedText,,0,0,0,,{\move(100,500,1100,500,0,10000)}{\b1}{\c&HFF0000&}Join @Moviemania_TG on Telegram For More !
