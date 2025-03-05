@@ -223,7 +223,7 @@ async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, 
 				    '-map', '1:0',     # Map first subtitle stream 
 				    '-c', 'copy',      # Copy video and audio streams
 				    '-c:s', 'srt',     # Encode subtitles as SRT 
-				    '-metadata', f'title={merged_title}',  # Overall title 
+				    '-metadata', f'title={metadata}',  # Overall title 
 				    '-metadata:s:v:0', f'title={video_title}',  # Video stream title
 				    '-metadata:s:a:0', f'title={audio_title}',  # Audio stream title 
 				    '-metadata:s', f'title={subtitle_title}',   # Subtitle stream title
