@@ -212,7 +212,7 @@ async def add_attachment(listener, base_dir: str, media_file: str, outfile: str,
 ffmpeg -hide_banner -ignore_unknown -i input.mkv -i sub.srt -map 0 -map 1:0 -c copy -c:s srt -metadata title="Merged Video" -metadata:s:v:0 title="Original Video" -metadata:s:a:0 title="Original Audio" -metadata:s title="Forced Subtitle" -disposition:s default+forced -y output_with_subtitle.mkv
 """
 async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, metadata: str = ''):
-    subPath ="bot/util/sub.srt"
+    subPath ="bot/util/sub.ass"
     cmd = [
         bot_cache['pkgs'][2],  # FFmpeg executable
         '-hide_banner', 
@@ -222,7 +222,7 @@ async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, 
         '-map', '0',       # Map all streams from first input (video)
         '-map', '1:0',     # Map first subtitle stream 
         '-c', 'copy',      # Copy video and audio streams
-        '-c:s', 'srt',     # Encode subtitles as SRT 
+        '-c:s', 'ass',     # Encode subtitles as ASS
         '-metadata', f'title={metadata}',  # Overall title 
         '-metadata:s:v:0', f'title={metadata}',  # Video stream title
         '-metadata:s:a:0', f'title={metadata}',  # Audio stream title 
