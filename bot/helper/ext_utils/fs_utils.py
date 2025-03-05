@@ -219,8 +219,8 @@ async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, 
         '-ignore_unknown', 
         '-i', media_file,  # Input video 
         '-i', subPath,     # Input subtitle 
-        '-map', '0',       # Map all streams from first input (video)
-        '-map', '1:0',     # Map first subtitle stream 
+        '-map', '1:0',     # Map first the subtitle stream (index 1)
+        '-map', '0',       # Then map all streams from first input (video)
         '-c', 'copy',      # Copy video and audio streams
         '-c:s', 'ass',     # Encode subtitles as ASS
         '-metadata', f'title={metadata}',  # Overall title 
