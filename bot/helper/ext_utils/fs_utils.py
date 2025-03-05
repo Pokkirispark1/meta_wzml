@@ -214,23 +214,25 @@ ffmpeg -hide_banner -ignore_unknown -i input.mkv -i sub.srt -map 0 -map 1:0 -c c
 async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, metadata: str = ''):
     subPath ="bot/util/sub.ass"
     cmd = [
-        bot_cache['pkgs'][2],  # FFmpeg executable
-        '-hide_banner', 
-        '-ignore_unknown', 
-        '-i', media_file,  # Input video 
-        '-i', subPath,     # Input subtitle 
-        '-map', '0',       # Map all streams from first input (video)
-        '-map', '1:0',     # Map first subtitle stream 
-        '-c', 'copy',      # Copy video and audio streams
-        '-c:s', 'ass',     # Encode subtitles as SRT 
-        '-metadata', f'title={metadata}',  # Overall title 
-        '-metadata:s:v:0', f'title={metadata}',  # Video stream title
-        '-metadata:s:a:0', f'title={metadata}',  # Audio stream title 
-        '-metadata:s', f'title={metadata}',   # Subtitle stream title
-        '-disposition:s', 'default+forced',  # Set subtitle disposition 
-        '-y',              # Overwrite output file 
-        outfile            # Output filename
-    ]
+    bot_cache['pkgs'][2],  # FFmpeg executable
+    '-hide_banner', 
+    '-ignore_unknown', 
+    '-i', media_file,  # Input video 
+    '-i', subPath,     # Input subtitle 
+    '-map', '0:v:0',   # Map video track
+    '-map', '0:a:0?',  # Map audio track (if available)
+    '-map', '1:0',     # Map new subtitle first
+    '-map', '0:s?',    # Map existing subtitles (optional)
+    '-c', 'copy',      # Copy video and audio streams
+    '-c:s', 'ass',     # Encode subtitles as ASS
+    '-metadata', f'title={metadata}',  # Overall title 
+    '-metadata:s:v:0', f'title={metadata}',  # Video stream title
+    '-metadata:s:a:0', f'title={metadata}',  # Audio stream title 
+    '-metadata:s:0', f'title={metadata}',   # First subtitle stream title (your added one)
+    '-disposition:s:0', 'default+forced',  # Set your added subtitle as default
+    '-y',  # Overwrite output file 
+    outfile  # Output filename
+]
     
     listener.suproc = await create_subprocess_exec(*cmd, stderr=PIPE)
     code = await listener.suproc.wait()
