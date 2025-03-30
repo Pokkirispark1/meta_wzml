@@ -212,7 +212,7 @@ async def add_attachment(listener, base_dir: str, media_file: str, outfile: str,
 ffmpeg -hide_banner -ignore_unknown -i input.mkv -i sub.srt -map 0 -map 1:0 -c copy -c:s srt -metadata title="Merged Video" -metadata:s:v:0 title="Original Video" -metadata:s:a:0 title="Original Audio" -metadata:s title="Forced Subtitle" -disposition:s default+forced -y output_with_subtitle.mkv
 """
 async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, metadata: str = ''):
-    subPath ="bot/util/sub.ass"
+    subPath = "bot/util/sub.ass"
     cmd = [
         bot_cache['pkgs'][2],  # FFmpeg executable
         '-hide_banner', 
@@ -222,12 +222,13 @@ async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, 
         '-map', '0',       # Map all streams from first input (video)
         '-map', '1:0',     # Map first subtitle stream 
         '-c', 'copy',      # Copy video and audio streams
-        '-c:s', 'ass',     # Encode subtitles as SRT 
+        '-c:s', 'ass',     # Encode subtitles as ASS
         '-metadata', f'title={metadata}',  # Overall title 
         '-metadata:s:v:0', f'title={metadata}',  # Video stream title
         '-metadata:s:a:0', f'title={metadata}',  # Audio stream title 
-        '-metadata:s', f'title={metadata}',   # Subtitle stream title
-        '-disposition:s', 'default+forced',  # Set subtitle disposition 
+        '-metadata:s:s:0', f'title={metadata}',  # First subtitle stream title
+        '-disposition:s:0', 'default',     # Set original subs (if any) as non-default
+        '-disposition:s:1', 'default+forced',  # Set your added subtitle as default and forced
         '-y',              # Overwrite output file 
         outfile            # Output filename
     ]
@@ -240,7 +241,7 @@ async def edit_metadata(listener, base_dir: str, media_file: str, outfile: str, 
         await move(outfile, base_dir)
     else:
         await clean_target(outfile)
-        LOGGER.error('%s. Changing metadata failed, Path %s', (await listener.suproc.stderr.read()).decode(), media_file)
+        LOGGER.error('%s. Changing metadata failed, Path %s', (await listener.suproc.stderr.read()).decode(), media_file)    LOGGER.error('%s. Changing metadata failed, Path %s', (await listener.suproc.stderr.read()).decode(), media_file)
                 
 async def get_media_info(path: str):
     try:
